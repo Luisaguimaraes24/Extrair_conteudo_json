@@ -1,0 +1,60 @@
+import sqlite3
+
+# Lista de nomes de banco de dados correspondentes a cada local
+database_names = [
+    'arquivo1.db', 
+    'arquivo2.db', 
+    'arquivo3.db', 
+    'arquivo4.db', 
+    'arquivo5.db', 
+    'arquivo6.db', 
+    'arquivo7.db', 
+    'arquivo8.db'
+]
+
+# Conectar-se aos bancos de dados e criar cursores
+connections = [sqlite3.connect(db) for db in database_names]
+cursors = [conn.cursor() for conn in connections]
+
+# Criar um dicionário para armazenar os IDs duplicados e os locais correspondentes
+duplicates = {}
+
+# Realizar INNER JOIN para encontrar IDs duplicados entre todos os locais
+for i in range(len(database_names)):
+    cursor = cursors[i]
+    
+    for j in range(i + 1, len(database_names)):
+        other_cursor = cursors[j]
+
+        cursor.execute('''
+            SELECT registration_id
+            FROM registration_ids
+        ''')
+
+        ids = {row[0] for row in cursor.fetchall()}
+
+        other_cursor.execute('''
+            SELECT registration_id
+            FROM registration_ids
+        ''')
+
+        other_ids = {row[0] for row in other_cursor.fetchall()}
+
+        common_ids = ids.intersection(other_ids)
+
+        # Adicionar IDs comuns ao dicionário de duplicatas
+        for id in common_ids:
+            if id not in duplicates:
+                duplicates[id] = set()
+            duplicates[id].add(database_names[i])
+            duplicates[id].add(database_names[j])
+
+# Criar um arquivo de saída para listar os IDs duplicados e locais correspondentes
+with open('duplicates.txt', 'w') as output_file:
+    output_file.write("IDs duplicados e locais correspondentes:\n")
+    for id, locations in duplicates.items():
+        output_file.write(f"ID: {id}, Locais: {', '.join(locations)}\n")
+
+# Fechar as conexões com os bancos de dados
+for conn in connections:
+    conn.close()
